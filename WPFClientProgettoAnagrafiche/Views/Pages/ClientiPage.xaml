@@ -1,0 +1,59 @@
+﻿<Page x:Class="WPFClientProgettoAnagrafiche.Views.Pages.ClientiPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Title="Clienti" Background="White">
+    <StackPanel Margin="20">
+        <TextBlock Text="Clienti" FontSize="28" FontWeight="Bold" Margin="0,0,0,20"/>
+
+        <StackPanel Orientation="Horizontal" Margin="0,15,0,15">
+            <Button Content="Aggiungi Cliente" 
+                    Background="#007ACC" 
+                    Foreground="White" 
+                    Padding="12,8" 
+                    FontSize="12" 
+                    Cursor="Hand"
+                    Command="{Binding AddClientCommand}" 
+                    Width="120"
+                    Margin="0,0,10,0"/>
+            <Button Content="Modifica" 
+                    Background="#007ACC" 
+                    Foreground="White" 
+                    Padding="12,8" 
+                    FontSize="12" 
+                    Cursor="Hand"
+                    Command="{Binding EditClientCommand}" 
+                    Width="120"
+                    Margin="0,0,10,0"/>
+            <Button Content="Elimina" 
+                    Background="#007ACC" 
+                    Foreground="White" 
+                    Padding="12,8" 
+                    FontSize="12" 
+                    Cursor="Hand"
+                    Command="{Binding DeleteClientCommand}" 
+                    Width="120"
+                    Margin="0,0,10,0"/>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="{Binding StatusText}" Margin="0,0,10,0" Foreground="#666" FontSize="12"/>
+            <TextBlock Text="{Binding SuccessMessage}" Margin="0,0,10,0" Foreground="Green" FontSize="12"/>
+            <TextBlock Text="{Binding ErrorMessage}" Margin="0,0,0,0" Foreground="Red" FontSize="12"/>
+        </StackPanel>
+
+        <DataGrid ItemsSource="{Binding Clienti}" 
+                  SelectedItem="{Binding SelectedClient}"
+                  AutoGenerateColumns="False" 
+                  IsReadOnly="True">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Nome/Ragione Sociale" Binding="{Binding Anagrafica.DisplayName}" Width="180"/>
+                <DataGridTextColumn Header="Email" Binding="{Binding Anagrafica.Email}" Width="150"/>
+                <DataGridTextColumn Header="Codice Fiscale" Binding="{Binding Anagrafica.CodiceFiscale}" Width="120"/>
+                <DataGridTextColumn Header="Partita Iva" Binding="{Binding Anagrafica.PartitaIva}" Width="120"/>
+                <DataGridTextColumn Header="Telefono" Binding="{Binding Anagrafica.Telefono}" Width="110"/>
+                <DataGridTextColumn Header="Data Registrazione" Binding="{Binding DataRegistrazione}" />
+                <DataGridTextColumn Header="Note" Binding="{Binding Note}" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </StackPanel>
+</Page>

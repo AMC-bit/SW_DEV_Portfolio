@@ -1,0 +1,69 @@
+﻿<Page x:Class="WPFClientProgettoAnagrafiche.Views.Pages.ContattiPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Title="Contatti" Background="White">
+    <StackPanel Margin="20">
+
+        <TextBlock Text="Contatti" FontSize="28" FontWeight="Bold" Margin="0,0,0,20"/>
+
+        <StackPanel Orientation="Horizontal" Margin="0,15,0,15">
+            <Button Content="Aggiungi Contatto" 
+                    Background="#007ACC" 
+                    Foreground="White" 
+                    Padding="12,8" 
+                    FontSize="12" 
+                    Cursor="Hand"
+                    Command="{Binding AddContactCommand}" 
+                    Width="125"
+                    Margin="0,0,10,0"/>
+            <Button Content="Modifica" 
+                    Background="#007ACC" 
+                    Foreground="White" 
+                    Padding="12,8" 
+                    FontSize="12" 
+                    Cursor="Hand"
+                    Command="{Binding EditContactCommand}" 
+                    Width="120"
+                    Margin="0,0,10,0"/>
+            <Button Content="Elimina" 
+                    Background="#007ACC" 
+                    Foreground="White" 
+                    Padding="12,8" 
+                    FontSize="12" 
+                    Cursor="Hand"
+                    Command="{Binding DeleteContactCommand}" 
+                    Width="120"
+                    Margin="0,0,10,0"/>
+            <Button Content="Converti" 
+                    Background="#007ACC" 
+                    Foreground="White" 
+                    Padding="12,8" 
+                    FontSize="12" 
+                    Cursor="Hand"
+                    Command="{Binding ConvertContactCommand}" 
+                    Width="120"
+                    Margin="0,0,10,0"/>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="{Binding StatusText}" Margin="0,0,10,0" Foreground="#666" FontSize="12"/>
+            <TextBlock Text="{Binding SuccessMessage}" Margin="0,0,10,0" Foreground="Green" FontSize="12"/>
+            <TextBlock Text="{Binding ErrorMessage}" Margin="0,0,0,0" Foreground="Red" FontSize="12"/>
+        </StackPanel>
+        <!--Itemsource : the source of data for datagrid, define in viewmodel, SelectedItem - the row you clicked is bound as SelectedContact and you can use that var in the ViewModel. Columns manually defined -->
+        <DataGrid ItemsSource="{Binding Contatti}" 
+                  SelectedItem="{Binding SelectedContact}"
+                  AutoGenerateColumns="False" 
+                  IsReadOnly="True">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Nome/Ragione Sociale" Binding="{Binding Anagrafica.DisplayName}" Width="180"/>
+                <DataGridTextColumn Header="Email" Binding="{Binding Anagrafica.Email}" Width="150"/>
+                <DataGridTextColumn Header="Codice Fiscale" Binding="{Binding Anagrafica.CodiceFiscale}" Width="120"/>
+                <DataGridTextColumn Header="Partita Iva" Binding="{Binding Anagrafica.PartitaIva}" Width="120"/>
+                <DataGridTextColumn Header="Telefono" Binding="{Binding Anagrafica.Telefono}" Width="110"/>
+                <DataGridTextColumn Header="Provenienza" Binding="{Binding Provenienza}" Width="100"/>
+                <DataGridTextColumn Header="Note" Binding="{Binding Note}" Width="200"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </StackPanel>
+</Page>

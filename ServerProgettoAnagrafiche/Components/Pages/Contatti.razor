@@ -1,0 +1,533 @@
+﻿@page "/contatti"
+@rendermode InteractiveServer
+@using BlazorServerProgettoAnagrafiche.Services
+@using BlazorServerProgettoAnagrafiche.ViewModels
+@using ProgettoAnagrafiche.Models
+@using ProgettoAnagrafiche.Models.DTO
+@inject ContattoService contattiService
+
+
+<h3>Contatti</h3>
+
+@*Success*@
+
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success" role="alert">
+        @successMessage
+    </div>
+}
+
+@*Validation errors display as list
+@if (validationErrors.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <h5>Errori di validazione:</h5>
+        <ul class="mb-0">
+            @foreach (var error in validationErrors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </div>
+}*@
+
+@*Legacy error msg*@
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        @errorMessage
+    </div>
+}
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="ShowCreateDialog">Aggiungi Contatto</button>
+    <button class="btn btn-primary me-1" @onclick="() => ShowEditDialog(currentContatto)" disabled="@(currentContatto == null)">Modifica</button>
+    <button class="btn btn-primary me-1" @onclick="() => ShowDeletePrompt(currentContatto)" disabled="@(currentContatto == null)">Elimina</button>
+    <button class="btn btn-primary me-1" @onclick="() => ShowConvertPrompt(currentContatto)" disabled="@(currentContatto == null)">Converti</button>
+</div>
+
+
+@if (contatti == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <table class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th>Nome/Ragione Sociale</th>
+                <th>Telefono</th>
+                <th>Email</th>
+                <th>Codice Fiscale</th>
+                <th>Partita Iva</th>
+                <th>Provenienza</th>
+                <th>Note</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var contatto in contatti)
+            {
+                <tr @onclick="() => OnRowClick(contatto)"
+                    style="cursor:pointer"
+                    class="@(currentContatto == contatto ? "table-primary" : "")">
+
+                    <td>@contatto.DisplayName</td>
+                    <td>@contatto.Telefono</td>
+                    <td>@contatto.Email</td>
+                    <td>@contatto.CodiceFiscale</td>
+                    <td>@contatto.PartitaIva</td>
+                    <td>@contatto.Provenienza</td>
+                    <td>@contatto.Note</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    }
+    
+
+@* Create/Edit Dialog *@
+@if (showDialog && currentContatto is not null)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(isEditMode ? "Modifica Contatto" : "Aggiungi Contatto")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseDialog"></button>
+                </div>
+                <div class="modal-body">
+                    @* Dialog validation errors *@
+                    @if (validationErrors.Count > 0)
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <h6>Errori di validazione:</h6>
+                            <ul class="mb-0">
+                                @foreach (var error in validationErrors)
+                                {
+                                    <li>@error</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label">Tipo Anagrafica</label>
+                        <div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="tipoAnagrafica" id="personaFisica"
+                                       checked="@currentContatto.IsPersonaFisica"
+                                       @onchange="() => currentContatto.IsPersonaFisica = true"
+                                       disabled="@(isEditMode)">
+                                <label class="form-check-label" for="personaFisica">Persona Fisica</label>
+                            </div>
+
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="tipoAnagrafica" id="personaGiuridica"
+                                       checked="@(!currentContatto.IsPersonaFisica)"
+                                       @onchange="() => currentContatto.IsPersonaFisica = false"
+                                       disabled="@(isEditMode)">
+                                <label class="form-check-label" for="personaGiuridica">Persona Giuridica</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (currentContatto.IsPersonaFisica ?? false)
+                    {
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nome</label>
+                                <input type="text" class="form-control" @bind="currentContatto.Nome" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Cognome</label>
+                                <input type="text" class="form-control" @bind="currentContatto.Cognome" />
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Ragione Sociale</label>
+                            <input type="text" class="form-control" @bind="currentContatto.RagioneSociale" />
+                        </div>
+                    }
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" @bind="currentContatto.Email" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Telefono</label>
+                            <input type="tel" class="form-control" @bind="currentContatto.Telefono" />
+                        </div>
+                    </div>
+
+                   
+                    <div class="row">
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Partita IVA</label>
+                            <input type="text" class="form-control" @bind="currentContatto.PartitaIva" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            @if (currentContatto.IsPersonaFisica ?? false)
+                            {
+                                <label class="form-label">Codice Fiscale</label>
+                                <input type="text" class="form-control" @bind="currentContatto.CodiceFiscale" />
+                            }
+                        </div>
+
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Provenienza</label>
+                        <select class="form-select" @bind="currentContatto.Provenienza">
+                            <option value="">Seleziona...</option>
+                            <option value="LinkedIn">LinkedIn</option>
+                            <option value="SitoWeb">SitoWeb</option>
+                            <option value="Pubblicita">Pubblicita</option>
+                        </select>
+                    </div>
+
+
+                    <div class="mb-3">
+                        <label class="form-label">Note</label>
+                        <textarea class="form-control" rows="3" @bind="currentContatto.Note"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDialog">Annulla</button>
+                    <button type="button" class="btn btn-primary" @onclick="RedirectAddEditContact">Salva</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@*Delete Prompt*@
+
+@if (showDeletePrompt)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Conferma Eliminazione</h5>
+                    <button type="button" class="btn-close" @onclick="CloseDeletePrompt"></button>
+                </div>
+                <div class="modal-body">
+                        Sei sicuro di voler eliminare il contatto @(currentContatto?.DisplayName ?? "selezionato")?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeletePrompt">Annulla</button>
+                    <button type="button" class="btn btn-danger" @onclick="DeleteContact">Elimina</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+    @*Convert Prompt*@
+
+    @if (showConvertPrompt)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Conferma Conversione</h5>
+                        <button type="button" class="btn-close" @onclick="CloseConvertPrompt"></button>
+                    </div>
+                    <div class="modal-body">
+                        Sei sicuro di voler convertire il contatto @(currentContatto?.DisplayName ?? "selezionato")?
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseConvertPrompt">Annulla</button>
+                        <button type="button" class="btn btn-primary" @onclick="ConvertContact">Converti</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+
+   
+
+    @code {
+
+    private List<ContattoBackendViewModel>? contatti;
+    private ContattoDTO nuovoContatto= new ContattoDTO { Provenienza = string.Empty };
+    private ContattoBackendViewModel? currentContatto = null;
+
+    private string? successMessage;
+    private string? errorMessage;
+
+    private List<string> validationErrors = new();
+
+    private bool isEditMode = false;
+    private bool showDialog = false;
+    private bool showDeletePrompt = false;
+    private bool showConvertPrompt = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadContatti();
+    }
+
+    private async Task LoadContatti()
+    {
+        contatti = await contattiService.GetContattiGrid();
+    }
+
+    // CRUD - Edit + Add
+    private async Task RedirectAddEditContact()
+    {
+        try
+        {
+            // Clear previous messages
+            validationErrors.Clear();
+            errorMessage = null;
+            successMessage = null;
+
+            if (currentContatto == null)
+            {
+                errorMessage = "Nessun contatto selezionato.";
+                return;
+            }
+
+            if (isEditMode)
+            {
+
+                // Fetch identity to update
+            var oldEntityResponse = await contattiService.GetByIdAsync(currentContatto.Id);
+
+            if (oldEntityResponse == null)
+                {
+                errorMessage = "Nessun cliente da modificare trovato.";
+                return;
+                }
+
+
+             if (oldEntityResponse.Errors.Any())
+                    {
+                    errorMessage = "Cliente da modificare non trovato.";
+                    return;
+                    }
+
+                // make a copy
+                var entity = oldEntityResponse.Data;
+
+                 if (entity == null)
+                {
+                    errorMessage = "Dati anagrafici mancanti per il contatto da modificare.";
+                    return;
+                }
+
+                // update the copy
+                entity.Provenienza = currentContatto.Provenienza;
+                entity.Note = currentContatto.Note;
+                entity.Anagrafica.IsPersonaFisica = currentContatto.IsPersonaFisica;
+                entity.Anagrafica.Nome = currentContatto.Nome;
+                entity.Anagrafica.Cognome = currentContatto.Cognome;
+                entity.Anagrafica.Email = currentContatto.Email;
+                entity.Anagrafica.Telefono = currentContatto.Telefono;
+                entity.Anagrafica.CodiceFiscale = currentContatto.CodiceFiscale;
+                entity.Anagrafica.PartitaIva = currentContatto.PartitaIva;
+                entity.Anagrafica.RagioneSociale = currentContatto.RagioneSociale;
+
+
+
+
+                var response = await contattiService.UpdateAsync(entity);
+                validationErrors = response.Errors ?? new List<string>();
+                StateHasChanged();
+
+                // if no errors, close and refresh
+                if (validationErrors.Count == 0)
+                {
+                    successMessage = "Contatto aggiornato con successo!";
+                    await LoadContatti();
+                    CloseDialog();
+                }
+            }
+
+            else
+            {
+               
+                var entity = new AnagraficaContatto
+            {
+                AnagraficaId = currentContatto.Id,
+                Provenienza = currentContatto.Provenienza,
+                Note = currentContatto.Note,
+                Anagrafica = new Anagrafiche
+                {
+                    Id = currentContatto.Id,
+                    IsPersonaFisica = currentContatto.IsPersonaFisica,
+                    Nome = currentContatto.Nome,
+                    Cognome = currentContatto.Cognome,
+                    Email = currentContatto.Email,
+                    Telefono = currentContatto.Telefono,
+                    CodiceFiscale = currentContatto.CodiceFiscale,
+                    PartitaIva = currentContatto.PartitaIva,
+                    RagioneSociale = currentContatto.RagioneSociale
+                }
+            };
+
+                var response = await contattiService.CreateAsync(entity);
+                validationErrors = response.Errors ?? new List<string>();
+                StateHasChanged();
+
+                // if no errors, close and refresh
+                if (validationErrors.Count == 0)
+                {
+                    successMessage = "Contatto aggiunto con successo!";
+                    await LoadContatti();
+                    CloseDialog();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            Console.WriteLine($"Error in RedirectAddEditContact: {ex}");
+        }
+    }
+
+    // CRUD : Delete specific ID
+    private async Task DeleteContact()
+    {
+        if (currentContatto == null)
+        {
+            errorMessage = "Nessun contatto selezionato.";
+            return;
+        }
+
+        var id = currentContatto.Id;
+        await contattiService.DeleteAsync(id);
+
+        successMessage = "Contatto eliminato con successo!";
+        await LoadContatti();
+        CloseDeletePrompt();
+
+    }
+
+    // Convert a contact
+    private async Task ConvertContact()
+    {
+
+
+        if (currentContatto == null)
+        {
+            errorMessage = "Nessun contatto selezionato.";
+            return;
+        }
+
+        var id = currentContatto.Id;
+        await contattiService.ConvertContattoAsync(id);
+
+        successMessage = "Contatto convertito con successo!";
+        await LoadContatti();
+        CloseConvertPrompt();
+
+    }
+
+
+    //  UI Selection, Dialogs & Prompt -----------------------------------
+
+    // record what the current GridDTO is when the corresponding row is clicked on a currentContatto v
+    void OnRowClick(ContattoBackendViewModel item)
+    {
+        currentContatto = item;
+    }
+
+
+    // show dialog for create
+    private void ShowCreateDialog()
+    {
+        validationErrors.Clear();
+
+        currentContatto = new ContattoBackendViewModel()
+        {
+            IsPersonaFisica = true,
+            Provenienza = 0 ,
+        };
+
+        isEditMode = false;
+        errorMessage = null;
+        successMessage = null;
+        showDialog = true;
+    }
+
+    // show dialog for edit (w radio buttons disabled)
+    private void ShowEditDialog(ContattoBackendViewModel? contatto)
+    {
+        validationErrors.Clear();
+
+        if (contatto is null)
+            return;
+
+        currentContatto = contatto.Clone();
+
+        isEditMode = true;
+        errorMessage = null;
+        successMessage = null;
+        showDialog = true;
+    }
+
+    private void CloseDialog()
+    {
+        validationErrors.Clear();
+        showDialog = false;
+        currentContatto = null;
+    }
+
+    // show delete prompt
+    private void ShowDeletePrompt(ContattoBackendViewModel? contatto)
+    {
+        validationErrors.Clear();
+
+        if (contatto is null)
+            return;
+
+        currentContatto = contatto.Clone();
+        errorMessage = null;
+        successMessage = null;
+        showDeletePrompt = true;
+    }
+
+    private void CloseDeletePrompt()
+    {
+        validationErrors.Clear();
+        showDeletePrompt = false;
+        currentContatto = null;
+    }
+
+
+    // show convert prompt
+    private void ShowConvertPrompt(ContattoBackendViewModel? contatto)
+    {
+        validationErrors.Clear();
+
+        if (contatto is null)
+            return;
+
+        currentContatto = contatto.Clone();
+        errorMessage = null;
+        successMessage = null;
+        showConvertPrompt = true;
+    }
+
+    private void CloseConvertPrompt()
+    {
+        validationErrors.Clear();
+        showConvertPrompt = false;
+        currentContatto = null;
+    }
+
+
+}

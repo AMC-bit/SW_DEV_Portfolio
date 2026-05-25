@@ -1,0 +1,47 @@
+## Build results
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+
+## User-specific files
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Visual Studio cache/options directory
+.vs/
+
+## VS Code settings (optional workspace-local)
+.vscode/
+
+## Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.trx
+
+## NuGet
+*.nupkg
+*.snupkg
+packages/
+!**/packages/build/
+
+## Logs
+*.log
+
+## OS files
+.DS_Store
+Thumbs.db
+
+## Rider
+.idea/
+
+## ReSharper
+_ReSharper*/
+*.DotSettings.user

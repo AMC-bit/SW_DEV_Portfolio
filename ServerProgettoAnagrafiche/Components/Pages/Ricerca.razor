@@ -1,0 +1,622 @@
+﻿    @page "/ricerca"
+    @rendermode InteractiveServer
+    @using BlazorServerProgettoAnagrafiche.Services
+@using BlazorServerProgettoAnagrafiche.ViewModels
+@using Microsoft.EntityFrameworkCore
+@using ProgettoAnagrafiche.Models
+@using ProgettoAnagrafiche.Models.DTO
+
+    @inject ClienteService ClienteService
+    @inject ContattoService ContattoService
+    @inject RicercaService RicercaService 
+
+    <h3>Ricerca</h3>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success" role="alert">
+            @successMessage
+        </div>
+    }
+
+    @* Search box 1 *@
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <label class="form-label">Nome</label>
+            <input type="text" class="form-control" @bind="searchNome" @bind:event="oninput" @onkeyup="ApplyFilter" placeholder="Cerca per nome" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Cognome</label>
+            <input type="text" class="form-control" @bind="searchCognome" @bind:event="oninput" @onkeyup="ApplyFilter" placeholder="Cerca per cognome" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Email</label>
+            <input type="text" class="form-control" @bind="searchEmail" @bind:event="oninput" @onkeyup="ApplyFilter" placeholder="Cerca per email" />
+        </div>
+    </div>
+
+    @* Search box 2 *@
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <label class="form-label">Codice Fiscale</label>
+            <input type="text" class="form-control" @bind="searchCodiceFiscale" @bind:event="oninput" @onkeyup="ApplyFilter" placeholder="Cerca per codice fiscale" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Partita IVA</label>
+            <input type="text" class="form-control" @bind="searchPartitaIva" @bind:event="oninput" @onkeyup="ApplyFilter" placeholder="Cerca per partita IVA" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Ragione Sociale</label>
+            <input type="text" class="form-control" @bind="searchRagioneSociale" @bind:event="oninput" @onkeyup="ApplyFilter" placeholder="Cerca per ragione sociale" />
+        </div>
+    </div>
+
+    @* Search box 3 *@
+    <div class="row mb-3">
+        <div class="col-md-4 d-flex align-items-end">
+            <button class="btn btn-secondary w-100" @onclick="ClearFilters">Pulisci Filtri</button>
+        </div>
+    </div>
+
+    @if (ricerche == null)
+    {
+        <p>Loading...</p>
+    }
+    else
+    {
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Nome/Ragione Sociale</th>
+                    <th>Email</th>
+                    <th>Telefono</th>
+                    <th>Codice Fiscale</th>
+                    <th>Partita IVA</th>
+                    <th>Data Reg.</th>
+                    <th>Provenienza Contatto</th>
+                    <th>Note Contatto</th>
+                    <th>Note Cliente</th>
+                    <th>Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var ricerca in filteredRicerche)
+                {
+                    <tr>
+                        <td>@ricerca.Tipo</td>
+                        <td>@ricerca.DisplayName</td>
+                        <td>@ricerca.Email</td>
+                        <td>@ricerca.Telefono</td>
+                        <td>@ricerca.CodiceFiscale</td>
+                        <td>@ricerca.PartitaIva</td>
+                        <td>@ricerca.DataRegistrazione?.ToString("d")</td>
+                        <td>@ricerca.Provenienza</td>
+                        <td>@ricerca.NoteContatto</td>
+                        <td>@ricerca.NoteCliente</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" @onclick="() => ViewAnagrafica(ricerca)">Apri Anagrafica</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        @* Create/Edit CLIENT Dialog *@
+        @if (showClienteDialog)
+        {
+            <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Modifica Cliente</h5>
+                            <button type="button" class="btn-close" @onclick="CloseClienteDialog"></button>
+                        </div>
+                        <div class="modal-body">
+                            @* Validation Errors *@
+                            @if (validationErrors.Any())
+                            {
+                                <div class="alert alert-danger">
+                                    <ul>
+                                        @foreach (var error in validationErrors)
+                                        {
+                                            <li>@error</li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
+                            @* Other Error messages *@
+                            @if (errorMessage != null)
+                            {
+                                <div class="alert alert-danger" role="alert">
+                                    @errorMessage
+                                </div>
+                            }
+                            <div class="mb-3">
+                                <label class="form-label">Tipo Anagrafica</label>
+                                <div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="tipoAnagrafica" id="clientPersonaFisica"
+                                               checked="@currentCliente.IsPersonaFisica"
+                                               @onchange="() => currentCliente.IsPersonaFisica = true"
+                                               disabled>
+                                        <label class="form-check-label" for="clientPersonaFisica">Persona Fisica</label>
+                                    </div>
+
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="tipoAnagrafica" id="clientPersonaGiuridica"
+                                               checked="@(!currentCliente.IsPersonaFisica)"
+                                               @onchange="() => currentCliente.IsPersonaFisica = false"
+                                               disabled>
+                                        <label class="form-check-label" for="clientPersonaGiuridica">Persona Giuridica</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @if (currentCliente.IsPersonaFisica ?? false)
+                            {
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Nome</label>
+                                        <input type="text" class="form-control" @bind="currentCliente.Nome" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Cognome</label>
+                                        <input type="text" class="form-control" @bind="currentCliente.Cognome" />
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label">Ragione Sociale</label>
+                                    <input type="text" class="form-control" @bind="currentCliente.RagioneSociale" />
+                                </div>
+                            }
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" @bind="currentCliente.Email" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Telefono</label>
+                                    <input type="tel" class="form-control" @bind="currentCliente.Telefono" />
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Partita IVA</label>
+                                    <input type="text" class="form-control" @bind="currentCliente.PartitaIva" />
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    @if (currentCliente.IsPersonaFisica ?? false)
+                                    {
+                                        <label class="form-label">Codice Fiscale</label>
+                                        <input type="text" class="form-control" @bind="currentCliente.CodiceFiscale" />
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Data di Registrazione</label>
+                                <input type="datetime-local" class="form-control" @bind="currentCliente.DataRegistrazione" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Note</label>
+                                <textarea class="form-control" rows="3" @bind="currentCliente.Note"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseClienteDialog">Annulla</button>
+                            <button type="button" class="btn btn-primary" @onclick="SaveCliente">Salva</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @* Create/Edit CONTATTO Dialog *@
+        @if (showContattoDialog)
+        {
+            <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Modifica Contatto</h5>
+                            <button type="button" class="btn-close" @onclick="CloseContattoDialog"></button>
+                        </div>
+                        <div class="modal-body">
+                            @* Validation Errors *@
+                            @if (validationErrors.Any())
+                            {
+                                <div class="alert alert-danger">
+                                    <ul>
+                                        @foreach (var error in validationErrors)
+                                        {
+                                            <li>@error</li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
+                            @* Other Error messages *@
+                            @if (errorMessage != null)
+                            {
+                                <div class="alert alert-danger" role="alert">
+                                    @errorMessage
+                                </div>
+                            }
+                            <div class="mb-3">
+                                <label class="form-label">Tipo Anagrafica</label>
+                                <div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="tipoAnagrafica" id="contattoPersonaFisica"
+                                               checked="@currentContatto.IsPersonaFisica"
+                                               @onchange="() => currentContatto.IsPersonaFisica = true"
+                                               disabled>
+                                        <label class="form-check-label" for="contattoPersonaFisica">Persona Fisica</label>
+                                    </div>
+
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="tipoAnagrafica" id="contattoPersonaGiuridica"
+                                               checked="@(!currentContatto.IsPersonaFisica)"
+                                               @onchange="() => currentContatto.IsPersonaFisica = false"
+                                               disabled>
+                                        <label class="form-check-label" for="contattoPersonaGiuridica">Persona Giuridica</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @if (currentContatto.IsPersonaFisica ?? false)
+                            {
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Nome</label>
+                                        <input type="text" class="form-control" @bind="currentContatto.Nome" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Cognome</label>
+                                        <input type="text" class="form-control" @bind="currentContatto.Cognome" />
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label">Ragione Sociale</label>
+                                    <input type="text" class="form-control" @bind="currentContatto.RagioneSociale" />
+                                </div>
+                            }
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" @bind="currentContatto.Email" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Telefono</label>
+                                    <input type="tel" class="form-control" @bind="currentContatto.Telefono" />
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Partita IVA</label>
+                                    <input type="text" class="form-control" @bind="currentContatto.PartitaIva" />
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    @if (currentContatto.IsPersonaFisica ?? false)
+                                    {
+                                        <label class="form-label">Codice Fiscale</label>
+                                        <input type="text" class="form-control" @bind="currentContatto.CodiceFiscale" />
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Provenienza</label>
+                                <select class="form-select" @bind="currentContatto.Provenienza">
+                                    <option value="">Seleziona...</option>
+                                    <option value="LinkedIn">LinkedIn</option>
+                                    <option value="SitoWeb">SitoWeb</option>
+                                    <option value="Pubblicita">Pubblicita</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Note</label>
+                                <textarea class="form-control" rows="3" @bind="currentContatto.Note"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseContattoDialog">Annulla</button>
+                            <button type="button" class="btn btn-primary" @onclick="SaveContatto">Salva</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+
+@code {
+    private List<RicercaBackendViewModel>? ricerche;
+    private List<RicercaBackendViewModel> filteredRicerche = new();
+
+    private ClienteBackendViewModel currentCliente = new();
+
+    // start unspecified
+    private ContattoBackendViewModel currentContatto = new() { Provenienza = 0 };
+
+    private string? errorMessage;
+    private string? successMessage;
+    private List<string> validationErrors = new();
+
+    private string searchNome = string.Empty;
+    private string searchCognome = string.Empty;
+    private string searchEmail = string.Empty;
+    private string searchCodiceFiscale = string.Empty;
+    private string searchPartitaIva = string.Empty;
+    private string searchRagioneSociale = string.Empty;
+
+    private bool showContattoDialog = false;
+    private bool showClienteDialog = false;
+
+    protected override async Task OnInitializedAsync()
+        {
+        await LoadData();
+        }
+
+    private async Task LoadData()
+        {
+        ricerche = await RicercaService.GetRicercaGrid();
+        ApplyFilter();
+        }
+
+    private void ApplyFilter()
+        {
+        // if the data isn't loaded yet, load a new list to avoid crashes
+        if (ricerche == null)
+            {
+            filteredRicerche = new List<RicercaBackendViewModel>();
+            return;
+            }
+
+        // isnullorwhitespace = filter is optional, ignores spaces || or if it's active use it, && compound with other filters if they are active
+        // ordinal ignore case: culture insensitive, case insensitive
+        filteredRicerche = ricerche.Where(r =>
+            (string.IsNullOrWhiteSpace(searchNome) || (r.Nome?.Contains(searchNome, StringComparison.OrdinalIgnoreCase) ?? false)) &&
+            (string.IsNullOrWhiteSpace(searchCognome) || (r.Cognome?.Contains(searchCognome, StringComparison.OrdinalIgnoreCase) ?? false)) &&
+            (string.IsNullOrWhiteSpace(searchEmail) || (r.Email?.Contains(searchEmail, StringComparison.OrdinalIgnoreCase) ?? false)) &&
+            (string.IsNullOrWhiteSpace(searchCodiceFiscale) || (r.CodiceFiscale?.Contains(searchCodiceFiscale, StringComparison.OrdinalIgnoreCase) ?? false)) &&
+            (string.IsNullOrWhiteSpace(searchPartitaIva) || (r.PartitaIva?.Contains(searchPartitaIva, StringComparison.OrdinalIgnoreCase) ?? false)) &&
+            (string.IsNullOrWhiteSpace(searchRagioneSociale) || (r.RagioneSociale?.Contains(searchRagioneSociale, StringComparison.OrdinalIgnoreCase) ?? false))
+        ).ToList();
+        }
+
+    // set all filters to empty/nullorwhitespace
+    private void ClearFilters()
+        {
+        searchNome = string.Empty;
+        searchCognome = string.Empty;
+        searchEmail = string.Empty;
+        searchCodiceFiscale = string.Empty;
+        searchPartitaIva = string.Empty;
+        searchRagioneSociale = string.Empty;
+        ApplyFilter();
+        }
+
+    // Dialog Controls
+    private void ViewAnagrafica(RicercaBackendViewModel ricerca)
+        {
+        if (ricerca.Tipo == "Contatto")
+            {
+            showContattoDialog = true;
+            currentContatto = new ContattoBackendViewModel
+                {
+                    Id = ricerca.Id,
+                    Nome = ricerca.Nome,
+                    Cognome = ricerca.Cognome,
+                    Telefono = ricerca.Telefono,
+                    Email = ricerca.Email,
+                    CodiceFiscale = ricerca.CodiceFiscale,
+                    PartitaIva = ricerca.PartitaIva,
+                    IsPersonaFisica = ricerca.IsPersonaFisica,
+                    RagioneSociale = ricerca.RagioneSociale,
+                    Provenienza = Enum.TryParse<ProgettoAnagrafiche.Models.Enums.Provenienza>(ricerca.Provenienza, out var provenienzaValue) ? provenienzaValue : default,
+                    Note = ricerca.NoteContatto
+                };
+            }
+        else if (ricerca.Tipo == "Cliente")
+            {
+            showClienteDialog = true;
+            currentCliente = new ClienteBackendViewModel
+                {
+                    Id = ricerca.Id,
+                    Nome = ricerca.Nome,
+                    Cognome = ricerca.Cognome,
+                    Telefono = ricerca.Telefono,
+                    Email = ricerca.Email,
+                    CodiceFiscale = ricerca.CodiceFiscale,
+                    PartitaIva = ricerca.PartitaIva,
+                    IsPersonaFisica = ricerca.IsPersonaFisica,
+                    RagioneSociale = ricerca.RagioneSociale,
+                    CodiceCliente = ricerca.CodiceCliente ?? 0,
+                    DataRegistrazione = ricerca.DataRegistrazione ?? DateTime.UtcNow,
+                    Note = ricerca.NoteCliente
+                };
+            }
+        }
+
+    private void CloseContattoDialog()
+        {
+        showContattoDialog = false;
+        validationErrors.Clear();
+        errorMessage = null;
+        successMessage = null;
+        }
+
+    private void CloseClienteDialog()
+        {
+        showClienteDialog = false;
+        validationErrors.Clear();
+        errorMessage = null;
+        successMessage = null;
+        }
+
+    // Save logic
+    private async Task SaveCliente()
+        {
+        try
+            {
+            // Clear previous messages
+            validationErrors.Clear();
+            errorMessage = null;
+            successMessage = null;
+
+            if (currentCliente == null)
+                {
+                errorMessage = "Nessun cliente selezionato.";
+                return;
+                }
+
+
+            // Fetch identity to update
+            var oldEntityResponse = await ClienteService.GetByIdAsync(currentCliente.Id);
+
+            if (oldEntityResponse == null)
+                {
+                errorMessage = "Nessun cliente da modificare trovato.";
+                return;
+                }
+
+
+             if (oldEntityResponse.Errors.Any())
+                    {
+                    errorMessage = "Cliente da modificare non trovato.";
+                    return;
+                    }
+
+                // make a copy
+                var entity = oldEntityResponse.Data;
+
+                 if (entity == null)
+                {
+                    errorMessage = "Dati anagrafici mancanti per il cliente da modificare.";
+                    return;
+                }
+
+
+
+                // update the copy
+                entity.DataRegistrazione = currentCliente.DataRegistrazione;
+                entity.Note = currentCliente.Note;
+                entity.Anagrafica.IsPersonaFisica = currentCliente.IsPersonaFisica;
+                entity.Anagrafica.Nome = currentCliente.Nome;
+                entity.Anagrafica.Cognome = currentCliente.Cognome;
+                entity.Anagrafica.Email = currentCliente.Email;
+                entity.Anagrafica.Telefono = currentCliente.Telefono;
+                entity.Anagrafica.CodiceFiscale = currentCliente.CodiceFiscale;
+                entity.Anagrafica.PartitaIva = currentCliente.PartitaIva;
+                entity.Anagrafica.RagioneSociale = currentCliente.RagioneSociale;
+
+
+                var response = await ClienteService.UpdateAsync(entity);
+                validationErrors = response.Errors ?? new List<string>();
+                StateHasChanged();
+
+                // if no errors, close and refresh
+                if (validationErrors.Count == 0)
+                    {
+                    successMessage = "Cliente aggiornato con successo!";
+                    await LoadData();
+                    CloseClienteDialog();
+                    }
+                
+            }
+
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            Console.WriteLine($"Errore nella redirezione: {ex}");
+        }
+    }
+
+    private async Task SaveContatto()
+    {
+        try
+        {
+            // Clear previous messages
+            validationErrors.Clear();
+            errorMessage = null;
+            successMessage = null;
+
+            
+            if (currentContatto == null)
+            {
+                errorMessage = "Nessun contatto selezionato.";
+                return;
+            }
+            
+            // Fetch identity to update
+            var oldEntityResponse = await ContattoService.GetByIdAsync(currentContatto.Id);
+
+            if (oldEntityResponse == null)
+                {
+                errorMessage = "Nessun cliente da modificare trovato.";
+                return;
+                }
+
+
+             if (oldEntityResponse.Errors.Any())
+                    {
+                    errorMessage = "Cliente da modificare non trovato.";
+                    return;
+                    }
+
+                // make a copy
+                var entity = oldEntityResponse.Data;
+
+                 if (entity == null)
+                {
+                    errorMessage = "Dati anagrafici mancanti per il contatto da modificare.";
+                    return;
+                }
+
+                // update the copy
+                entity.Provenienza = currentContatto.Provenienza;
+                entity.Note = currentContatto.Note;
+                entity.Anagrafica.IsPersonaFisica = currentContatto.IsPersonaFisica;
+                entity.Anagrafica.Nome = currentContatto.Nome;
+                entity.Anagrafica.Cognome = currentContatto.Cognome;
+                entity.Anagrafica.Email = currentContatto.Email;
+                entity.Anagrafica.Telefono = currentContatto.Telefono;
+                entity.Anagrafica.CodiceFiscale = currentContatto.CodiceFiscale;
+                entity.Anagrafica.PartitaIva = currentContatto.PartitaIva;
+                entity.Anagrafica.RagioneSociale = currentContatto.RagioneSociale;
+
+                var response = await ContattoService.UpdateAsync(entity);
+                validationErrors = response.Errors ?? new List<string>();
+                StateHasChanged();
+
+                // if no errors, close and refresh
+                if (validationErrors.Count == 0)
+                {
+                    successMessage = "Contatto aggiornato con successo!";
+                    await LoadData();
+                    CloseContattoDialog();
+                }
+          
+                
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            Console.WriteLine($"Errore nella redirezione: {ex}");
+        }
+          
+        }
+    }

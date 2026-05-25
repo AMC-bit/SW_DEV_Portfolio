@@ -1,0 +1,450 @@
+﻿@page "/clienti"
+@rendermode InteractiveServer
+@using BlazorServerProgettoAnagrafiche.Services
+
+@using BlazorServerProgettoAnagrafiche.ViewModels
+@using ProgettoAnagrafiche.Models
+@using ProgettoAnagrafiche.Models.DTO
+@inject ClienteService clientiService
+
+
+@* REFACTORED to match contatti 1:1 *@
+
+<h3>Clienti</h3>
+
+@*Success*@
+
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success" role="alert">
+        @successMessage
+    </div>
+}
+
+@* @*Validation errors display as list
+@if (validationErrors.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <h5>Errori di validazione:</h5>
+        <ul class="mb-0">
+            @foreach (var error in validationErrors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </div>
+} *@
+
+@*Legacy error msg*@
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        @errorMessage
+    </div>
+}
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="ShowCreateDialog">Aggiungi Cliente</button>
+    <button class="btn btn-primary me-1" @onclick="() => ShowEditDialog(currentCliente)" disabled="@(currentCliente == null)">Modifica</button>
+    <button class="btn btn-primary me-1" @onclick="() => ShowDeletePrompt(currentCliente)" disabled="@(currentCliente == null)">Elimina</button>
+</div>
+
+@if (clienti == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <table class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th>Nome/Ragione Sociale</th>
+                <th>Email</th>
+                <th>Codice Fiscale</th>
+                <th>Partita Iva</th>
+                <th>Telefono</th>
+                <th>Data Registrazione</th>
+                <th>Note</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var cliente in clienti)
+            {
+                <tr @onclick="() => OnRowClick(cliente)"
+                    style="cursor:pointer"
+                    class="@(currentCliente == cliente ? "table-primary" : "")">
+
+                    <td>@cliente.DisplayName</td>
+                    <td>@cliente.Email</td>
+                    <td>@cliente.CodiceFiscale</td>
+                    <td>@cliente.PartitaIva</td>
+                    <td>@cliente.Telefono</td>
+                    <td>@cliente.DataRegistrazione.ToString("d")</td>
+                    <td>@cliente.Note</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@* Create/Edit Dialog *@
+@if (showDialog && currentCliente is not null)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(isEditMode ? "Modifica Cliente" : "Aggiungi Cliente")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseDialog"></button>
+                </div>
+                <div class="modal-body">
+                    @* Dialog validation errors *@
+                    @if (validationErrors.Count > 0)
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <h6>Errori di validazione:</h6>
+                            <ul class="mb-0">
+                                @foreach (var error in validationErrors)
+                                {
+                                    <li>@error</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label">Tipo Anagrafica</label>
+                        <div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="tipoAnagrafica" id="personaFisica"
+                                       checked="@currentCliente.IsPersonaFisica"
+                                       @onchange="() => currentCliente.IsPersonaFisica = true"
+                                       disabled="@(isEditMode)">
+                                <label class="form-check-label" for="personaFisica">Persona Fisica</label>
+                            </div>
+
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="tipoAnagrafica" id="personaGiuridica"
+                                       checked="@(!currentCliente.IsPersonaFisica)"
+                                       @onchange="() => currentCliente.IsPersonaFisica = false"
+                                       disabled="@(isEditMode)">
+                                <label class="form-check-label" for="personaGiuridica">Persona Giuridica</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (currentCliente.IsPersonaFisica ?? false)
+                    {
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nome</label>
+                                <input type="text" class="form-control" @bind="currentCliente.Nome" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Cognome</label>
+                                <input type="text" class="form-control" @bind="currentCliente.Cognome" />
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Ragione Sociale</label>
+                            <input type="text" class="form-control" @bind="currentCliente.RagioneSociale" />
+                        </div>
+                    }
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" @bind="currentCliente.Email" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Telefono</label>
+                            <input type="tel" class="form-control" @bind="currentCliente.Telefono" />
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Partita IVA</label>
+                            <input type="text" class="form-control" @bind="currentCliente.PartitaIva" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            @if (currentCliente.IsPersonaFisica ?? false)
+                            {
+                                <label class="form-label">Codice Fiscale</label>
+                                <input type="text" class="form-control" @bind="currentCliente.CodiceFiscale" />
+                            }
+                        </div>
+                    </div>
+
+
+
+                    <div class="mb-3">
+                        <label class="form-label">Data di Registrazione</label>
+                        <input type="datetime-local" class="form-control" @bind="currentCliente.DataRegistrazione" />
+                    </div>
+
+
+
+                    <div class="mb-3">
+                        <label class="form-label">Note</label>
+                        <textarea class="form-control" rows="3" @bind="currentCliente.Note"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDialog">Annulla</button>
+                    <button type="button" class="btn btn-primary" @onclick="RedirectAddEditCliente">Salva</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Delete Prompt *@
+
+@if (showDeletePrompt)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Conferma Eliminazione</h5>
+                    <button type="button" class="btn-close" @onclick="CloseDeletePrompt"></button>
+                </div>
+                <div class="modal-body">
+                    Sei sicuro di voler eliminare il cliente @(currentCliente?.DisplayName ?? "selezionato")?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeletePrompt">Annulla</button>
+                    <button type="button" class="btn btn-danger" @onclick="DeleteCliente">Elimina</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+
+    private List<ClienteBackendViewModel>? clienti;
+    private ClienteBackendViewModel? currentCliente = null;
+
+    private string? successMessage;
+    private string? errorMessage;
+
+    private List<string> validationErrors = new();
+
+    private bool isEditMode = false;
+    private bool showDialog = false;
+    private bool showDeletePrompt = false;
+
+    protected override async Task OnInitializedAsync()
+        {
+        await LoadClienti();
+        }
+
+    private async Task LoadClienti()
+        {
+        clienti = await clientiService.GetClientiGrid();
+        }
+
+    // CRUD - Edit + Add
+    private async Task RedirectAddEditCliente()
+        {
+        try
+            {
+            // Clear previous messages
+            validationErrors.Clear();
+            errorMessage = null;
+            successMessage = null;
+
+            if (currentCliente == null)
+                {
+                errorMessage = "Nessun cliente selezionato.";
+                return;
+                }
+
+        if (isEditMode)
+        {
+            // Fetch identity to update
+            var oldEntityResponse = await clientiService.GetByIdAsync(currentCliente.Id);
+
+            if (oldEntityResponse == null)
+                {
+                errorMessage = "Nessun cliente da modificare trovato.";
+                return;
+                }
+
+
+             if (oldEntityResponse.Errors.Any())
+                    {
+                    errorMessage = "Cliente da modificare non trovato.";
+                    return;
+                    }
+
+                // make a copy
+                var entity = oldEntityResponse.Data;
+
+                if (entity == null)
+                {
+                    errorMessage = "Dati anagrafici mancanti per il cliente da modificare.";
+                    return;
+                }
+
+               
+                // update the copy
+                entity.DataRegistrazione = currentCliente.DataRegistrazione;
+                entity.Note = currentCliente.Note;
+                entity.Anagrafica.IsPersonaFisica = currentCliente.IsPersonaFisica;
+                entity.Anagrafica.Nome = currentCliente.Nome;
+                entity.Anagrafica.Cognome = currentCliente.Cognome;
+                entity.Anagrafica.Email = currentCliente.Email;
+                entity.Anagrafica.Telefono = currentCliente.Telefono;
+                entity.Anagrafica.CodiceFiscale = currentCliente.CodiceFiscale;
+                entity.Anagrafica.PartitaIva = currentCliente.PartitaIva;
+                entity.Anagrafica.RagioneSociale = currentCliente.RagioneSociale;
+
+
+                var response = await clientiService.UpdateAsync(entity);
+                validationErrors = response.Errors ?? new List<string>();
+                StateHasChanged();
+
+                // if no errors, close and refresh
+                if (validationErrors.Count == 0)
+                {
+                    successMessage = "Cliente aggiornato con successo!";
+                    await LoadClienti();
+                    CloseDialog();
+                }
+            }
+
+            else
+            {
+               var entity = new AnagraficaCliente
+            {
+                DataRegistrazione = currentCliente.DataRegistrazione,
+                Note = currentCliente.Note,
+                Anagrafica = new Anagrafiche
+                {
+                    IsPersonaFisica = currentCliente.IsPersonaFisica,
+                    Nome = currentCliente.Nome,
+                    Cognome = currentCliente.Cognome,
+                    Email = currentCliente.Email,
+                    Telefono = currentCliente.Telefono,
+                    CodiceFiscale = currentCliente.CodiceFiscale,
+                    PartitaIva = currentCliente.PartitaIva,
+                    RagioneSociale = currentCliente.RagioneSociale
+                }
+            };
+
+                var response = await clientiService.CreateAsync(entity);
+                validationErrors = response.Errors ?? new List<string>();
+                StateHasChanged();
+
+                // if no errors, close and refresh
+                if (validationErrors.Count == 0)
+                {
+                    successMessage = "Cliente aggiunto con successo!";
+                    await LoadClienti();
+                    CloseDialog();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            Console.WriteLine($"Error in RedirectAddEditCliente: {ex}");
+        }
+    }
+
+    // CRUD : Delete specific ID
+    private async Task DeleteCliente()
+    {
+        if (currentCliente == null)
+        {
+            errorMessage = "Nessun cliente selezionato.";
+            return;
+        }
+
+        var id = currentCliente.Id;
+        await clientiService.DeleteAsync(id);
+
+        successMessage = "Cliente eliminato con successo!";
+        await LoadClienti();
+        CloseDeletePrompt();
+    }
+
+    // no convert
+
+    //  UI Selection, Dialogs & Prompts -----------------------------------
+
+    // record what the current GridDTO is when the corresponding row is clicked
+    void OnRowClick(ClienteBackendViewModel item)
+    {
+        currentCliente = item;
+    }
+
+    // show dialog for create
+    private void ShowCreateDialog()
+    {
+        validationErrors.Clear();
+
+        currentCliente = new ClienteBackendViewModel()
+        {
+            IsPersonaFisica = true,
+        };
+
+        isEditMode = false;
+        errorMessage = null;
+        successMessage = null;
+        showDialog = true;
+    }
+
+    // show dialog for edit (w radio buttons disabled)
+    private void ShowEditDialog(ClienteBackendViewModel? cliente)
+    {
+        validationErrors.Clear();
+
+        if (cliente is null)
+            return;
+
+        currentCliente = cliente.Clone();
+
+        isEditMode = true;
+        errorMessage = null;
+        successMessage = null;
+        showDialog = true;
+    }
+
+    private void CloseDialog()
+    {
+        validationErrors.Clear();
+        showDialog = false;
+        currentCliente = null;
+    }
+
+    // show delete prompt
+    private void ShowDeletePrompt(ClienteBackendViewModel? cliente)
+    {
+        validationErrors.Clear();
+
+        if (cliente is null)
+            return;
+
+        currentCliente = cliente.Clone();
+        errorMessage = null;
+        successMessage = null;
+        showDeletePrompt = true;
+    }
+
+    private void CloseDeletePrompt()
+    {
+        validationErrors.Clear();
+        showDeletePrompt = false;
+        currentCliente = null;
+    }
+
+    // convert = no
+}
